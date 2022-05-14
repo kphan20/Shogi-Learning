@@ -14,7 +14,8 @@
             #shogi-board { border-spacing: 0; border-collapse: collapse; margin-left: auto; margin-right: auto;}
             #shogi-board th { padding: .5em; }
             #shogi-board td { border: 1px solid; width: 3em; height: 3em; }
-            #shogi-board .light { background: #eee; }
+            td.light { background: #eee; }
+            td.move-dest { background: #eee radial-gradient(rgba(20,85,30,0.5) 19%, rgba(0,0,0,0) 20%)}
         </style>
         <link rel="stylesheet" href="">
     </head>
@@ -146,5 +147,36 @@
         
         <a href="index.html">Back to main menu</a>
         <script src="gamelogic.js" async defer></script>
+        <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
+        <script>
+            const socket = io.connect("http://localhost:5000");
+            socket.on("message", function (message) {
+                console.log(message);
+            });
+            socket.on('after connect', function (message) {
+                console.log(message);
+            })
+            socket.on('possible moves', function (moves) {
+                console.log(moves);
+                clearDestCells();
+                const board = document.getElementById("shogi-board");
+                moves.forEach((move) => {
+                    const cell = board.rows[move[1][0] + 1].cells[move[1][1]];
+                    cell.classList.add('move-dest');
+                    if (move[2]) cell.classList.add('promote');
+                })
+            })
+            document.querySelectorAll('.piece').forEach((piece) => {
+                piece.addEventListener("click", function (e) {
+                    socket.emit("json", "hello");
+                    if (piece.classList.contains(playerColorStr)) {
+                        const data = {'color': playerColor, 'board': getBoard(),
+                        'rank': parseInt(piece.parentElement.parentElement.rowIndex) - 1,
+                        'file': parseInt(piece.parentElement.cellIndex)};
+                        socket.emit("move", data);
+                    }
+                });
+            })
+        </script>
     </body>
 </html>
