@@ -17,6 +17,34 @@ const pieceMap = [
   "prom-pawn",
 ];
 
+const pieceArt = {
+  king: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Shogi_gyokusho%28svg%29.svg",
+  "gold-gen":
+    "https://upload.wikimedia.org/wikipedia/commons/b/b1/Shogi_kinsho%28svg%29.svg",
+  rook: "https://upload.wikimedia.org/wikipedia/commons/4/43/Shogi_hisha%28svg%29.svg",
+  bishop:
+    "https://upload.wikimedia.org/wikipedia/commons/4/4f/Shogi_kakugyo%28svg%29.svg",
+  "silv-gen":
+    "https://upload.wikimedia.org/wikipedia/commons/1/18/Shogi_ginsho%28svg%29.svg",
+  lance:
+    "https://upload.wikimedia.org/wikipedia/commons/7/77/Shogi_kyosha%28svg%29.svg",
+  knight:
+    "https://upload.wikimedia.org/wikipedia/commons/f/fb/Shogi_keima%28svg%29.svg",
+  pawn: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Shogi_fuhyo%28svg%29.svg",
+  "prom-rook":
+    "https://upload.wikimedia.org/wikipedia/commons/b/b5/Shogi_ryuo%28svg%29.svg",
+  "prom-bish":
+    "https://upload.wikimedia.org/wikipedia/commons/7/74/Shogi_ryuma%28svg%29.svg",
+  "prom-silv-gen":
+    "https://upload.wikimedia.org/wikipedia/commons/a/ad/Shogi_narigin%28svg%29.svg",
+  "prom-lance":
+    "https://upload.wikimedia.org/wikipedia/commons/f/f1/Shogi_narikyo%28svg%29.svg",
+  "prom-knight":
+    "https://upload.wikimedia.org/wikipedia/commons/6/65/Shogi_narikei%28svg%29.svg",
+  "prom-pawn":
+    "https://upload.wikimedia.org/wikipedia/commons/7/78/Shogi_tokin%28svg%29.svg",
+};
+
 // assuming this is from the perspective of the black(first) player
 const defaultBoard = [
   [-6, -7, -5, -2, -1, -2, -5, -7, -6],
@@ -60,13 +88,12 @@ const initBoard = (board) => {
 
         // currently using img elements to represent pieces
         const newPiece = document.createElement("img");
-        newPiece.setAttribute(
-          "src",
-          "https://upload.wikimedia.org/wikipedia/commons/0/05/Shogi_osho%28svg%29.svg"
-        );
+        const pieceName = pieceMap[Math.abs(col)];
+        newPiece.setAttribute("src", pieceArt[pieceName]);
+        newPiece.setAttribute("align", "middle");
         newPiece.setAttribute(
           "class",
-          `piece ${col > 0 ? "black" : "white"} ${pieceMap[Math.abs(col)]}`
+          `piece ${col > 0 ? "black" : "white"} ${pieceName}`
         );
 
         // flips opposing player's pieces

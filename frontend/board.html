@@ -146,7 +146,7 @@
         </table>
         
         <a href="index.html">Back to main menu</a>
-        <script src="gamelogic.js" async defer></script>
+        <script src="gamelogic.js"></script>
         <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
         <script>
             const socket = io.connect("http://localhost:5000");
@@ -165,7 +165,7 @@
                     cell.classList.add('move-dest');
                     if (move[2]) cell.classList.add('promote');
                 })
-            })
+            });
             document.querySelectorAll('.piece').forEach((piece) => {
                 piece.addEventListener("click", function (e) {
                     socket.emit("json", "hello");
