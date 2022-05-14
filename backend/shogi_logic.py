@@ -28,7 +28,7 @@ check_owned(piece, player): Checks whether piece belongs to player
 rotate_board(board): Orients board towards other player
 move_to_board(board, player, move): Adds move to copy of board and returns it
 get_moves(board, player, cap_pieces): Gets all moves a player can do
-force_promote(player, piece, rank): Checks if piece is required to promote
+force_promote(piece, rank): Checks if piece is required to promote
 iterate_direction(board, player, rank, file, move): Adds moves for pieces
     that can move multiple tiles in a direction
 get_prom_rank(player, rank): Returns whether or not a piece can promote given its rank
@@ -132,13 +132,11 @@ def get_moves(board: NDArray, player: int, cap_pieces: dict) -> list[Move]:
     return moves
 
 
-def force_promote(player: int, piece: int, rank: int) -> bool:
+def force_promote(piece: int, rank: int) -> bool:
     """
     Checks if piece is required to promote
 
     Args:
-        board (NDArray): representation of board
-        player (int): current player
         piece (int): piece to be moved
         rank (int): piece's rank
 
@@ -147,10 +145,10 @@ def force_promote(player: int, piece: int, rank: int) -> bool:
     """
     # forced promotion rules for lance and pawn
     if piece in (LANCE_ID, PAWN_ID):
-        return (player == WHITE and rank == 0) or (player == BLACK and rank == 8)
+        return rank == 8
     # forced promotion rules for knight
     elif piece == KNIGHT_ID:
-        return (player == WHITE and rank < 2) or (player == BLACK and rank > 6)
+        return rank > 6
     # no forced promotion for other pieces
     return False
 
@@ -209,7 +207,7 @@ def iterate_direction(
         # if on empty square or enemy, add move
         if not check_owned(destination, player):
             # adds non-promotion move if force promotion isn't required
-            if not force_promote(player, piece, new_rank):
+            if not force_promote(piece, new_rank):
                 moves.append(Move(start_point, (new_rank, new_file)))
             # adds promotion move if possible
             if can_prom:
@@ -281,7 +279,7 @@ def get_piece_moves(
         # adds moves if destination square is not owned by player
         if not check_owned(board[new_rank][new_file], player):
             # add non-promotion move if not forced to promote
-            if not force_promote(player, piece, new_rank):
+            if not force_promote(piece, new_rank):
                 moves.append(Move((rank, file), (new_rank, new_file)))
             # adds promotion move if valid
             if prom and (rank <= PROMOTE_RANK or new_rank <= PROMOTE_RANK):
