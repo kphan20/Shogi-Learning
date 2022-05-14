@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Shogi App</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="">
+    </head>
+    <body>
+        <h1>Welcome to Shogi!</h1>
+        <a onclick="randStart()" href="board.html">Random Start</a> <br>
+        <a onclick="blackStart()" href="board.html">Black</a> <br>
+        <a onclick="whiteStart()" href="board.html">White</a>
+        <script>
+            function randStart() {
+                sessionStorage.setItem('color', 0);
+            }
+            function blackStart() {
+                sessionStorage.setItem('color', 1);
+            }
+            function whiteStart() {
+                sessionStorage.setItem('color', -1);
+            }
+        </script>
+    </body>
+</html>

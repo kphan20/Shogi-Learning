@@ -1,0 +1,14 @@
+{
+  "name": "shogi-gui",
+  "version": "1.0.0",
+  "description": "Application frontend/gui for testing/playing against shogi models",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "kphan20",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^18.2.3"
+  }
+}
