@@ -42,7 +42,7 @@ class ShogiGame:
 
     def getGameEnded(self) -> bool:
         """
-        Returns current state of game (in play, draw, loss)
+        Returns current status of game (in play, draw, loss)
 
         Returns:
             bool: currently returns whether game has been lost or not
