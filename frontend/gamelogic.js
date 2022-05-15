@@ -17,6 +17,7 @@ const pieceMap = [
   "prom-pawn",
 ];
 
+// current links for piece images
 const pieceArt = {
   king: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Shogi_gyokusho%28svg%29.svg",
   "gold-gen":
@@ -71,12 +72,12 @@ if (!playerColor) playerColor = Math.round(Math.random()) * 2 - 1;
 const playerColorStr = playerColor === 1 ? "black" : "white";
 
 // contains coordinates of piece that is currently selected by player
+// if captured piece is selected, rank is -1 and file is piece type
 let selectedPiece;
 
 // contains the player to move
 let currentPlayer = 1;
 
-// stores the captured pieces of each player
 const initCapturedPieces = () => {
   const players = [-1, 1];
   const capPieces = {};
@@ -86,41 +87,76 @@ const initCapturedPieces = () => {
   });
   return capPieces;
 };
+// stores the captured pieces of each player
+/* 
+  Structure - 
+  {
+    [playerColor]:
+    {
+      [pieceId]: [count]
+    }
+  }
+*/
 const capturedPieces = initCapturedPieces();
 
 // DOM elements stored for future interaction
 const htmlBoard = document.getElementById("shogi-board");
-const cells = document.querySelectorAll("td");
+const cells = document.querySelectorAll("#shogi-board td");
 
-// takes in a board configuration and adds pieces to htmlBoard
+// given a signed piece (indicating owner and piece id), return html element
+const createPiece = (piece) => {
+  // currently using img elements to represent pieces
+  const newPiece = document.createElement("img");
+  const pieceName = pieceMap[Math.abs(piece)];
+  newPiece.setAttribute("src", pieceArt[pieceName]);
+  newPiece.setAttribute("align", "middle");
+  newPiece.setAttribute(
+    "class",
+    `piece ${piece > 0 ? "black" : "white"} ${pieceName}`
+  );
+
+  // flips opposing player's pieces
+  if (piece * playerColor < 0) {
+    newPiece.style.transform = "scaleY(-1)";
+  }
+
+  return newPiece;
+};
+
+// taking a board configuration, adds pieces to htmlBoard and sets up
+// captured pieces
 const initBoard = (board) => {
-  // adds check to make sure board is valid
+  // add check to make sure board is valid
+
   board.forEach((row, rowInd) => {
     row.forEach((col, colInd) => {
       if (col) {
         // adjusts for board orientation being black-oriented
+        // this is only accurate for symmetrical boards - like starting board
+        // need to implement rotate method to be position agnostic
         col *= playerColor;
-
-        // currently using img elements to represent pieces
-        const newPiece = document.createElement("img");
-        const pieceName = pieceMap[Math.abs(col)];
-        newPiece.setAttribute("src", pieceArt[pieceName]);
-        newPiece.setAttribute("align", "middle");
-        newPiece.setAttribute(
-          "class",
-          `piece ${col > 0 ? "black" : "white"} ${pieceName}`
-        );
-
-        // flips opposing player's pieces
-        if (col * playerColor < 0) {
-          newPiece.style.transform = "scaleY(-1)";
-        }
-
-        // finally appends to DOM
-        htmlBoard.rows[rowInd + 1].cells[colInd].appendChild(newPiece);
+        htmlBoard.rows[rowInd + 1].cells[colInd].appendChild(createPiece(col));
       }
     });
   });
+
+  // sets up each player's hand
+  const topPieces = document.getElementById("top-pieces");
+  const botPieces = document.getElementById("bottom-pieces");
+  for (let i = 2; i <= 8; i++) {
+    const dropPiece = document.createElement("div");
+    dropPiece.style.backgroundImage = `url(${pieceArt[pieceMap[i]]})`;
+    dropPiece.classList.add("drop-piece");
+    dropPiece.classList.add(pieceMap[i]);
+    dropPiece.setAttribute("counter", 0);
+    const topDropPiece = dropPiece.cloneNode();
+    dropPiece.classList.add(playerColorStr);
+    topDropPiece.classList.add(playerColor === 1 ? "white" : "black");
+    topDropPiece.style.transform = "scaleY(-1)";
+
+    topPieces.rows[0].cells[8 - i].appendChild(topDropPiece);
+    botPieces.rows[0].cells[8 - i].appendChild(dropPiece);
+  }
 };
 
 // for now, initialize board to standard shogi setup
@@ -142,25 +178,8 @@ const getBoard = () => {
   return board;
 };
 
-// gets all the pieces on the board
-const pieceArr = document.querySelectorAll(".piece");
-
-// updates selected piece if player clicks on their own piece
-// potentially change so that only player's piece get this listener
-pieceArr.forEach((el) => {
-  el.addEventListener("mousedown", () => {
-    if (el.classList.contains(playerColorStr)) {
-      selectedPiece = [
-        parseInt(el.parentElement.parentElement.rowIndex),
-        parseInt(el.parentElement.cellIndex),
-      ];
-    }
-    console.log(selectedPiece);
-  });
-});
-
-// sets each tile to align center
-cells.forEach((cell) => {
+// sets each td element to align center
+document.querySelectorAll("td").forEach((cell) => {
   cell.setAttribute("align", "center");
 });
 
@@ -172,3 +191,7 @@ const clearDestCells = () => {
 };
 
 htmlBoard.addEventListener("click", clearDestCells);
+
+// document.querySelectorAll(".drop-piece").forEach((el) => {
+
+// })

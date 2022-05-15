@@ -11,15 +11,36 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            #shogi-board { border-spacing: 0; border-collapse: collapse; margin-left: auto; margin-right: auto;}
+            table { border-spacing: 0; border-collapse: collapse; margin-left: auto; margin-right: auto;}
             #shogi-board th { padding: .5em; }
-            #shogi-board td { border: 1px solid; width: 4em; height: 4em; }
+            td { border: 1px solid; width: 4em; height: 4em; }
             td.light { background: #eee; }
             td.move-dest { background: #eee radial-gradient(rgba(20,85,30,0.5) 19%, rgba(0,0,0,0) 20%)}
+            .drop-piece {opacity: 0.2; width: 100%; height: 100%; background-repeat: no-repeat;
+            background-position: center; position:relative}
+            .valid:after {content:attr(counter);background:#d64f00;
+            color: #fff; bottom: 0; right:0; 
+            line-height: 0.9em; padding: 3px 0.3em; font-weight: bold;
+            font-size: 1em; position:absolute;}
+            .valid {opacity:1;}
+            #top-pieces .valid:after {transform: scaleY(-1); bottom:43px}
         </style>
         <link rel="stylesheet" href="">
     </head>
     <body>
+        <table id="top-pieces">
+            <tbody>
+                <tr>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                </tr>
+            </tbody>
+        </table>
         <table id="shogi-board">
             <tbody>
                 <tr>
@@ -35,7 +56,7 @@
                     <th></th>
                 </tr>
                 <tr>
-                    <td class="light" align="center"></td>
+                    <td class="light"></td>
                     <td class="light"></td>
                     <td class="light"></td>
                     <td class="light"></td>
@@ -142,33 +163,107 @@
                     <td class="light"></td>
                     <th>9</th>
                 </tr>
+                <tr>
+                    <th>&nbsp;</th>
+                </tr>
             </tbody>
         </table>
-        
+        <table id="bottom-pieces">
+            <tbody>
+                <tr>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                    <td class="light"></td>
+                </tr>
+            </tbody>
+        </table>
         <a href="index.html">Back to main menu</a>
         <script src="gamelogic.js"></script>
         <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
         <script>
             const socket = io.connect("http://localhost:5000");
+            const topPieces = document.getElementById("top-pieces");
+            const bottom = document.getElementById("bottom-pieces");
 
+            // handles what happens when a piece is clicked
+            const playerPieceListener = (piece) => {
+                const rowNum = parseInt(piece.parentElement.parentElement.rowIndex);
+                const colNum = parseInt(piece.parentElement.cellIndex)
+                selectedPiece = [
+                    rowNum,
+                    colNum,
+                ];
+  
+                const data = {'color': playerColor, 'board': getBoard(),
+                'rank': rowNum - 1,
+                'file': colNum};
+                socket.emit("move", data);
+            }
+
+            // handles piece captures
+            const removePiece = (cell, playerCapPieces) => {
+                // logic to add captured piece to player hand
+                let capPieceType = cell.firstChild.getAttribute('class').split(' ')[PIECE_NAME];
+                capPieceType = pieceMap.indexOf(capPieceType);
+                const newCount = capturedPieces[currentPlayer][capPieceType] + 1;
+                capturedPieces[currentPlayer][capPieceType] = newCount;
+
+                // updates number of captured piece
+                const capCell = playerCapPieces.rows[0].cells[8 - capPieceType].firstChild;
+                capCell.setAttribute('counter', newCount);
+
+                if (newCount === 1)
+                    capCell.classList.add("valid");
+                cell.firstChild.remove();
+            }
+
+            // handles piece drops
+            const dropPiece = (cell, piece, playerCapPieces) => {
+                const newPiece = createPiece(piece * currentPlayer);
+
+                // listener only required for player's pieces
+                if (currentPlayer === playerColor) {
+                    newPiece.addEventListener('click', () => {
+                        playerPieceListener(newPiece);
+                    })
+                }
+                cell.appendChild(newPiece);
+
+                // update captured piece counts
+                const newCount = capturedPieces[currentPlayer][piece] - 1;
+                capturedPieces[currentPlayer][piece] = newCount;
+
+                // update displayed count
+                const capCell = playerCapPieces.rows[0].cells[8 - piece].firstChild;
+                capCell.setAttribute('counter', newCount);
+
+                if (newCount === 0)
+                    capCell.classList.remove("valid");
+            }
+
+            // processes incoming move from backend model
             socket.on('model move', function (move) {
                 const cell = htmlBoard.rows[move[1][0] + 1].cells[move[1][1]];
                 if (cell.firstChild) {
-                    // logic to add captured piece to player hand
-                    let capPieceType = cell.firstChild.getAttribute('class').split(' ')[PIECE_NAME];
-                    capPieceType = pieceMap.indexOf(capPieceType);
-                    capturedPieces[currentPlayer][capPieceType] = capturedPieces[currentPlayer][capPieceType] + 1;
-                    cell.firstChild.remove();
+                    removePiece(cell, topPieces);
                 }
+                if (move[0][0] === -1) {
+                    dropPiece(cell, move[0][1], topPieces);
+                }
+                else
                 cell.appendChild(
                     htmlBoard.rows[move[0][0] + 1].cells[move[0][1]].firstChild
                 );
                 currentPlayer *= -1;
             })
 
+            // processes possible moves received from server
             socket.on('possible moves', function (moves) {
                 clearDestCells();
-                //const board = document.getElementById("shogi-board");
                 moves.forEach((move) => {
                     const cell = htmlBoard.rows[move[1][0] + 1].cells[move[1][1]];
                     cell.classList.add('move-dest');
@@ -176,33 +271,50 @@
                 })
             });
 
+            // adds listener to player's pieces
             document.querySelectorAll('.piece').forEach((piece) => {
-                piece.addEventListener("click", function (e) {
-                    socket.emit("json", "hello");
-                    if (piece.classList.contains(playerColorStr)) {
-                        const data = {'color': playerColor, 'board': getBoard(),
-                        'rank': parseInt(piece.parentElement.parentElement.rowIndex) - 1,
-                        'file': parseInt(piece.parentElement.cellIndex)};
-                        socket.emit("move", data);
-                    }
-                });
+                if (piece.classList.contains(playerColorStr)) {
+                    piece.addEventListener("click", () => {
+                        playerPieceListener(piece);
+                    })
+                };
+            });
+
+            // adds listener to player's captured pieces
+            document.querySelectorAll("#bottom-pieces .drop-piece").forEach(el => {
+                el.addEventListener('click', function () {
+                    if (!el.classList.contains('valid')) return;
+                    const pieceInfo = el.getAttribute("class").split(" ");
+                    selectedPiece = [-1, pieceMap.indexOf(pieceInfo[1])];
+                    const data = {'color': playerColor, 'board': getBoard(),
+                    'rank': -1, 'file': selectedPiece[1]}
+                    socket.emit('move', data);
+                })
             })
 
             document.querySelectorAll('.light').forEach((cell) => {
                 cell.addEventListener("click", () => {
+
+                    // if not valid move destination, return
                     if (!cell.classList.contains("move-dest")) return;
+
+                    // if not player turn, return
                     if (playerColor !== currentPlayer) return;
-                    // if move-dest, then execute move
+                    
+                    // capture piece
                     if (cell.firstChild) {
-                        // logic to add captured piece to player hand
-                        let capPieceType = cell.firstChild.getAttribute('class').split(' ')[PIECE_NAME];
-                        capPieceType = pieceMap.indexOf(capPieceType);
-                        capturedPieces[playerColor][capPieceType] = capturedPieces[playerColor][capPieceType] + 1;
-                        cell.firstChild.remove();
+                        removePiece(cell, bottom);
                     }
-                    cell.appendChild(
-                        htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild
-                    );
+
+                    // handles drops and moves
+                    if (selectedPiece[0] === -1) {
+                        dropPiece(cell, selectedPiece[1], bottom);
+                    }
+                    else {
+                        cell.appendChild(
+                            htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild
+                        );
+                    }
                     currentPlayer *= -1;
                     const data = {'board': getBoard(), 'color': currentPlayer,
                     'captured_dict': capturedPieces[currentPlayer]}

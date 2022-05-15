@@ -8,6 +8,7 @@ from shogi_logic import (
     rotate_board,
     check_check,
     get_moves,
+    find_drops_for_piece,
 )
 import numpy as np
 
@@ -32,7 +33,10 @@ def move_to_arr(move: Move):
 def send_moves(data):
     board = np.array(data["board"])
     player = data["color"]
-    moves = find_moves_for_piece(board, player, data["rank"], data["file"])
+    if data["rank"] == -1:
+        moves = find_drops_for_piece(board, player, data["file"])
+    else:
+        moves = find_moves_for_piece(board, player, data["rank"], data["file"])
 
     # filter illegal moves
     moves = [

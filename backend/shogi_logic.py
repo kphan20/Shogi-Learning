@@ -343,6 +343,40 @@ def find_moves_for_piece(
     return moves
 
 
+def add_drops_piece(
+    board: NDArray, player: int, rank: int, file: int, piece: int, drops: list[Move]
+):
+    if piece == PAWN_ID:
+        # rank check
+        if rank == 0:
+            return
+
+        other_pawn = piece * player
+
+        # checks if there is another pawn in the file
+        if other_pawn in board[:, file]:
+            return
+
+        # creates copy of board with pawn placed
+        new_board = np.copy(board)
+        new_board[rank][file] = other_pawn
+
+        # if enemy king in check, check if checkmate
+        if board[rank - 1][file] == -player * KING_ID:
+            # don't add drop move if results in checkmate
+            if checkmate_check(rotate_board(new_board), -player):
+                return
+
+    if piece == LANCE_ID and rank == 0:
+        return
+
+    if piece == KNIGHT_ID and rank <= 1:
+        return
+
+    # if valid drop, add to drops array
+    drops.append(Move((-1, piece), (rank, file)))
+
+
 def add_drops(
     board: NDArray, player: int, rank: int, file: int, captured_pieces: dict
 ) -> list[Move]:
@@ -363,36 +397,37 @@ def add_drops(
     drops = []
     for captured_piece, count in captured_pieces.items():
         if count > 0:
-            if captured_piece == PAWN_ID:
+            add_drops_piece(board, player, rank, file, captured_piece, drops)
+            # if captured_piece == PAWN_ID:
 
-                # rank check
-                if rank == 0:
-                    continue
+            #     # rank check
+            #     if rank == 0:
+            #         continue
 
-                other_pawn = captured_piece * player
+            #     other_pawn = captured_piece * player
 
-                # checks if there is another pawn in the file
-                if other_pawn in board[:, file]:
-                    continue
+            #     # checks if there is another pawn in the file
+            #     if other_pawn in board[:, file]:
+            #         continue
 
-                # creates copy of board with pawn placed
-                new_board = np.copy(board)
-                new_board[rank][file] = other_pawn
+            #     # creates copy of board with pawn placed
+            #     new_board = np.copy(board)
+            #     new_board[rank][file] = other_pawn
 
-                # if enemy king in check, check if checkmate
-                if board[rank - 1][file] == -player * KING_ID:
-                    # don't add drop move if results in checkmate
-                    if checkmate_check(rotate_board(new_board), -player):
-                        continue
+            #     # if enemy king in check, check if checkmate
+            #     if board[rank - 1][file] == -player * KING_ID:
+            #         # don't add drop move if results in checkmate
+            #         if checkmate_check(rotate_board(new_board), -player):
+            #             continue
 
-            if captured_piece == LANCE_ID and rank == 0:
-                continue
+            # if captured_piece == LANCE_ID and rank == 0:
+            #     continue
 
-            if captured_piece == KNIGHT_ID and rank <= 1:
-                continue
+            # if captured_piece == KNIGHT_ID and rank <= 1:
+            #     continue
 
-            # if valid drop, add to drops array
-            drops.append(Move((-1, captured_piece), (rank, file)))
+            # # if valid drop, add to drops array
+            # drops.append(Move((-1, captured_piece), (rank, file)))
 
     return drops
 
@@ -586,3 +621,14 @@ def check_check(board: NDArray, player: int) -> bool:
             break
 
     return result
+
+
+# METHODS ONLY USED BY FRONTEND CLIENT
+def find_drops_for_piece(board: NDArray, player: int, dropped_piece: int):
+    drops = []
+    for rank, row in enumerate(board):
+        for file, piece in enumerate(row):
+            if piece == EMPTY_SQUARE_ID:
+                add_drops_piece(board, player, rank, file, dropped_piece, drops)
+
+    return drops
