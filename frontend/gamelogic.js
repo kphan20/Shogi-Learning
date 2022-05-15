@@ -73,6 +73,21 @@ const playerColorStr = playerColor === 1 ? "black" : "white";
 // contains coordinates of piece that is currently selected by player
 let selectedPiece;
 
+// contains the player to move
+let currentPlayer = 1;
+
+// stores the captured pieces of each player
+const initCapturedPieces = () => {
+  const players = [-1, 1];
+  const capPieces = {};
+  players.forEach((player) => {
+    capPieces[player] = {};
+    for (let i = 2; i <= 8; i++) capPieces[player][i] = 0;
+  });
+  return capPieces;
+};
+const capturedPieces = initCapturedPieces();
+
 // DOM elements stored for future interaction
 const htmlBoard = document.getElementById("shogi-board");
 const cells = document.querySelectorAll("td");
@@ -144,22 +159,9 @@ pieceArr.forEach((el) => {
   });
 });
 
-// moves selected piece if conditions are met
+// sets each tile to align center
 cells.forEach((cell) => {
   cell.setAttribute("align", "center");
-  cell.addEventListener("click", () => {
-    if (!cell.classList.contains("move-dest")) return;
-
-    // if move-dest, then execute move
-    if (cell.firstChild) {
-      // add logic to add captured piece to player hand
-      cell.firstChild.remove();
-    }
-    console.log(selectedPiece);
-    cell.appendChild(
-      htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild
-    );
-  });
 });
 
 // clears marked destination squares

@@ -13,7 +13,7 @@
         <style>
             #shogi-board { border-spacing: 0; border-collapse: collapse; margin-left: auto; margin-right: auto;}
             #shogi-board th { padding: .5em; }
-            #shogi-board td { border: 1px solid; width: 3em; height: 3em; }
+            #shogi-board td { border: 1px solid; width: 4em; height: 4em; }
             td.light { background: #eee; }
             td.move-dest { background: #eee radial-gradient(rgba(20,85,30,0.5) 19%, rgba(0,0,0,0) 20%)}
         </style>
@@ -150,22 +150,32 @@
         <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
         <script>
             const socket = io.connect("http://localhost:5000");
-            socket.on("message", function (message) {
-                console.log(message);
-            });
-            socket.on('after connect', function (message) {
-                console.log(message);
+
+            socket.on('model move', function (move) {
+                const cell = htmlBoard.rows[move[1][0] + 1].cells[move[1][1]];
+                if (cell.firstChild) {
+                    // logic to add captured piece to player hand
+                    let capPieceType = cell.firstChild.getAttribute('class').split(' ')[PIECE_NAME];
+                    capPieceType = pieceMap.indexOf(capPieceType);
+                    capturedPieces[currentPlayer][capPieceType] = capturedPieces[currentPlayer][capPieceType] + 1;
+                    cell.firstChild.remove();
+                }
+                cell.appendChild(
+                    htmlBoard.rows[move[0][0] + 1].cells[move[0][1]].firstChild
+                );
+                currentPlayer *= -1;
             })
+
             socket.on('possible moves', function (moves) {
-                console.log(moves);
                 clearDestCells();
-                const board = document.getElementById("shogi-board");
+                //const board = document.getElementById("shogi-board");
                 moves.forEach((move) => {
-                    const cell = board.rows[move[1][0] + 1].cells[move[1][1]];
+                    const cell = htmlBoard.rows[move[1][0] + 1].cells[move[1][1]];
                     cell.classList.add('move-dest');
                     if (move[2]) cell.classList.add('promote');
                 })
             });
+
             document.querySelectorAll('.piece').forEach((piece) => {
                 piece.addEventListener("click", function (e) {
                     socket.emit("json", "hello");
@@ -175,6 +185,28 @@
                         'file': parseInt(piece.parentElement.cellIndex)};
                         socket.emit("move", data);
                     }
+                });
+            })
+
+            document.querySelectorAll('.light').forEach((cell) => {
+                cell.addEventListener("click", () => {
+                    if (!cell.classList.contains("move-dest")) return;
+                    if (playerColor !== currentPlayer) return;
+                    // if move-dest, then execute move
+                    if (cell.firstChild) {
+                        // logic to add captured piece to player hand
+                        let capPieceType = cell.firstChild.getAttribute('class').split(' ')[PIECE_NAME];
+                        capPieceType = pieceMap.indexOf(capPieceType);
+                        capturedPieces[playerColor][capPieceType] = capturedPieces[playerColor][capPieceType] + 1;
+                        cell.firstChild.remove();
+                    }
+                    cell.appendChild(
+                        htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild
+                    );
+                    currentPlayer *= -1;
+                    const data = {'board': getBoard(), 'color': currentPlayer,
+                    'captured_dict': capturedPieces[currentPlayer]}
+                    socket.emit("get move", data);
                 });
             })
         </script>
