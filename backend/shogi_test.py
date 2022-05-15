@@ -20,6 +20,21 @@ class TestShogiMethods(unittest.TestCase):
         )
         self.default_board = DEFAULT_BOARD
         self.empty_board = np.zeros((BOARD_SIZE, BOARD_SIZE))
+        self.check = self.pawn_board = np.array(
+            [
+                [-ROOK_ID] + 8 * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                [KING_ID] + 8 * [0],
+            ]
+        )
+        self.check2 = np.copy(self.default_board)
+        self.check2[6][4] = -ROOK_ID
 
     def test_check_owned(self):
         self.assertTrue(check_owned(1, 1))
@@ -51,6 +66,10 @@ class TestShogiMethods(unittest.TestCase):
         # print(pieces)
         # print(self.empty_board)
         self.assertEqual(len(result), 72)
+        result = get_moves(self.check, 1, {})
+        self.assertEqual(len(result), 2)
+        result = get_moves(self.check2, 1, {})
+        self.assertEqual(len(result), 5)
 
 
 if __name__ == "__main__":

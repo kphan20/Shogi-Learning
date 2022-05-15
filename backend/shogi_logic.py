@@ -510,6 +510,7 @@ def find_moves_for_piece_check(
     """
     # gets opposing player's piece
     piece = board[rank][file] * -player
+
     result = False
 
     if piece == KING_ID:
@@ -555,6 +556,7 @@ def find_moves_for_piece_check(
         result = iterate_direction_check(board, player, rank, file, LANCE_MOVES[0])
     elif piece == SILVER_GEN_ID:
         result = get_piece_moves_check(board, player, rank, file, SILVER_GEN_MOVES)
+
     return result
 
 
@@ -571,6 +573,7 @@ def check_check(board: NDArray, player: int) -> bool:
         bool: whether player is in check or not
     """
     result = False
+
     for rank, row in enumerate(board):
         for file, piece in enumerate(row):
             # checks if piece belongs to opposing player
@@ -579,4 +582,7 @@ def check_check(board: NDArray, player: int) -> bool:
                 # breaks if player's king is in check
                 if result:
                     break
+        if result:
+            break
+
     return result
