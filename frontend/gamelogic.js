@@ -186,12 +186,9 @@ document.querySelectorAll("td").forEach((cell) => {
 // clears marked destination squares
 const clearDestCells = () => {
   document.querySelectorAll(".move-dest").forEach((el) => {
-    el.classList.remove("move-dest");
+    el.classList.remove("move-dest", "promote");
+    el.removeAttribute("visited");
   });
 };
 
 htmlBoard.addEventListener("click", clearDestCells);
-
-// document.querySelectorAll(".drop-piece").forEach((el) => {
-
-// })

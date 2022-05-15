@@ -209,6 +209,9 @@
                 // logic to add captured piece to player hand
                 let capPieceType = cell.firstChild.getAttribute('class').split(' ')[PIECE_NAME];
                 capPieceType = pieceMap.indexOf(capPieceType);
+
+                // removes promotion status from promoted piece
+                if (capPieceType > 8) capPieceType -= 6;
                 const newCount = capturedPieces[currentPlayer][capPieceType] + 1;
                 capturedPieces[currentPlayer][capPieceType] = newCount;
 
@@ -238,11 +241,21 @@
                 capturedPieces[currentPlayer][piece] = newCount;
 
                 // update displayed count
+                // index derived from table row cells order
                 const capCell = playerCapPieces.rows[0].cells[8 - piece].firstChild;
                 capCell.setAttribute('counter', newCount);
 
                 if (newCount === 0)
                     capCell.classList.remove("valid");
+            }
+
+            const promotePiece = (movingPiece) => {
+                const prevClass = movingPiece.getAttribute('class').split(" ");
+                const prevPiece = prevClass[PIECE_NAME];
+                const newInd = pieceMap.indexOf(prevPiece) + 6;
+                movingPiece.setAttribute('src', pieceArt[pieceMap[newInd]]);
+                prevClass[PIECE_NAME] = pieceMap[newInd]
+                movingPiece.setAttribute('class', prevClass.join(' '));
             }
 
             // processes incoming move from backend model
@@ -254,10 +267,19 @@
                 if (move[0][0] === -1) {
                     dropPiece(cell, move[0][1], topPieces);
                 }
-                else
-                cell.appendChild(
-                    htmlBoard.rows[move[0][0] + 1].cells[move[0][1]].firstChild
-                );
+                else {
+                    const movingPiece = htmlBoard.rows[move[0][0] + 1].cells[move[0][1]].firstChild;
+                    if (move[2]) {
+                        promotePiece(movingPiece);
+                        // const prevClass = movingPiece.getAttribute('class').split(" ");
+                        // const prevPiece = prevClass[PIECE_NAME];
+                        // const newInd = pieceMap.indexOf(prevPiece) + 6;
+                        // movingPiece.setAttribute('src', pieceArt[pieceMap[newInd]]);
+                        // prevClass[PIECE_NAME] = pieceMap[newInd]
+                        // movingPiece.setAttribute('class', prevClass.join(' '));
+                    }
+                    cell.appendChild(movingPiece);
+                }
                 currentPlayer *= -1;
             })
 
@@ -266,7 +288,14 @@
                 clearDestCells();
                 moves.forEach((move) => {
                     const cell = htmlBoard.rows[move[1][0] + 1].cells[move[1][1]];
+                    // potentially handle cases for repeats
                     cell.classList.add('move-dest');
+                    const newCount = cell.getAttribute('visited') 
+                        ? parseInt(cell.getAttribute('visited')) + 1 
+                        : 1;
+                    cell.setAttribute('visited', newCount);
+
+
                     if (move[2]) cell.classList.add('promote');
                 })
             });
@@ -301,19 +330,27 @@
                     // if not player turn, return
                     if (playerColor !== currentPlayer) return;
                     
-                    // capture piece
-                    if (cell.firstChild) {
-                        removePiece(cell, bottom);
-                    }
-
                     // handles drops and moves
                     if (selectedPiece[0] === -1) {
                         dropPiece(cell, selectedPiece[1], bottom);
                     }
                     else {
-                        cell.appendChild(
-                            htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild
-                        );
+
+                        const htmlPiece = htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild;
+                        if (cell.classList.contains("promote")) {
+                            if (parseInt(cell.getAttribute('visited')) < 2) {
+                                promotePiece(htmlPiece);
+                            }
+                            else {
+                                console.log("implement choice");
+                            }
+                        }
+
+                        // capture piece
+                        if (cell.firstChild) {
+                            removePiece(cell, bottom);
+                        }
+                        cell.appendChild(htmlPiece);
                     }
                     currentPlayer *= -1;
                     const data = {'board': getBoard(), 'color': currentPlayer,
