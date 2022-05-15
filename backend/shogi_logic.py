@@ -29,13 +29,15 @@ rotate_board(board): Orients board towards other player
 move_to_board(board, player, move): Adds move to copy of board and returns it
 get_moves(board, player, cap_pieces): Gets all moves a player can do
 force_promote(piece, rank): Checks if piece is required to promote
-iterate_direction(board, player, rank, file, move): Adds moves for pieces
+iterate_direction(board, player, rank, file, move, prom): Adds moves for pieces
     that can move multiple tiles in a direction
-get_prom_rank(player, rank): Returns whether or not a piece can promote given its rank
 get_piece_moves(board, player, rank, file, move_set, prom): Given the piece's
     move set and whether it can promote, create moves
 find_moves_for_piece(board, player, rank, file): Skeleton function that
     gets moves for specific piece it encounters
+add_drops_piece(board, player, rank, file, piece, drops): For a given
+    piece and square, add a drop move to drops if piece can be dropped
+    at the square 
 add_drops(board, player, rank, file, captured_pieces): Gets drops that
     are possible on an empty tile
 checkmate_check(board, player): Checks if player is in
@@ -145,16 +147,16 @@ def force_promote(piece: int, rank: int) -> bool:
     """
     # forced promotion rules for lance and pawn
     if piece in (LANCE_ID, PAWN_ID):
-        return rank == 8
+        return rank == 0
     # forced promotion rules for knight
     elif piece == KNIGHT_ID:
-        return rank > 6
+        return rank < 2
     # no forced promotion for other pieces
     return False
 
 
 def iterate_direction(
-    board: NDArray, player: int, rank: int, file: int, move: tuple
+    board: NDArray, player: int, rank: int, file: int, move: tuple, prom: bool
 ) -> list[Move]:
     """
     Adds moves for pieces that can move multiple tiles in a single direction
@@ -165,6 +167,7 @@ def iterate_direction(
         rank (int): starting rank
         file (int): starting file
         move (tuple): direction to iterate in
+        prom (bool): whether or not piece can promote
 
     Returns:
         list[Move]: all possible moves in the given direction
@@ -210,30 +213,13 @@ def iterate_direction(
             if not force_promote(piece, new_rank):
                 moves.append(Move(start_point, (new_rank, new_file)))
             # adds promotion move if possible
-            if can_prom:
+            if prom and can_prom:
                 moves.append(Move(start_point, (new_rank, new_file), True))
 
         # if another piece encountered, stop searching
         if destination != 0:
             break
     return moves
-
-
-# this is obsolete if we flip the board to face the current player
-def get_prom_rank(player: int, rank: int):
-    """
-    Returns whether or not a piece can promote given its rank
-
-    Args:
-        player (int): current player
-        rank (int): piece's rank
-
-    Returns:
-        bool: whether promotion is possible or not
-    """
-    if player == BLACK:
-        return rank <= 2
-    return rank >= 6
 
 
 def get_piece_moves(
@@ -318,17 +304,17 @@ def find_moves_for_piece(
         moves += get_piece_moves(board, player, rank, file, GOLD_GEN_MOVES, False)
     elif piece == BISHOP_ID:
         for move in BISHOP_MOVES:
-            moves += iterate_direction(board, player, rank, file, move)
+            moves += iterate_direction(board, player, rank, file, move, True)
     elif piece == ROOK_ID:
         for move in ROOK_MOVES:
-            moves += iterate_direction(board, player, rank, file, move)
+            moves += iterate_direction(board, player, rank, file, move, True)
     elif piece == PROM_BISH_ID:
         for move in BISHOP_MOVES:
-            moves += iterate_direction(board, player, rank, file, move)
+            moves += iterate_direction(board, player, rank, file, move, False)
         moves += get_piece_moves(board, player, rank, file, ROOK_MOVES, False)
     elif piece == PROM_ROOK_ID:
         for move in ROOK_MOVES:
-            moves += iterate_direction(board, player, rank, file, move)
+            moves += iterate_direction(board, player, rank, file, move, False)
         moves += get_piece_moves(board, player, rank, file, BISHOP_MOVES, False)
     elif piece == KNIGHT_ID:
         moves += get_piece_moves(board, player, rank, file, KNIGHT_MOVES, True)
@@ -336,7 +322,7 @@ def find_moves_for_piece(
         # potentially get rid of PAWN_MOVES
         moves += get_piece_moves(board, player, rank, file, PAWN_MOVES, True)
     elif piece == LANCE_ID:
-        moves += iterate_direction(board, player, rank, file, LANCE_MOVES[0])
+        moves += iterate_direction(board, player, rank, file, LANCE_MOVES[0], True)
     elif piece == SILVER_GEN_ID:
         moves += get_piece_moves(board, player, rank, file, SILVER_GEN_MOVES, True)
 
@@ -346,6 +332,18 @@ def find_moves_for_piece(
 def add_drops_piece(
     board: NDArray, player: int, rank: int, file: int, piece: int, drops: list[Move]
 ):
+    """
+    For a given piece and square, add a drop move to drops if piece can
+    be dropped at the square
+
+    Args:
+        board (NDArray): 2D representation of the board
+        player (int): current player
+        rank (int): rank of desired square
+        file (int): file of desired square
+        piece (int): dropped piece
+        drops (list[Move]): accumulator of valid drop moves
+    """
     if piece == PAWN_ID:
         # rank check
         if rank == 0:
@@ -398,36 +396,6 @@ def add_drops(
     for captured_piece, count in captured_pieces.items():
         if count > 0:
             add_drops_piece(board, player, rank, file, captured_piece, drops)
-            # if captured_piece == PAWN_ID:
-
-            #     # rank check
-            #     if rank == 0:
-            #         continue
-
-            #     other_pawn = captured_piece * player
-
-            #     # checks if there is another pawn in the file
-            #     if other_pawn in board[:, file]:
-            #         continue
-
-            #     # creates copy of board with pawn placed
-            #     new_board = np.copy(board)
-            #     new_board[rank][file] = other_pawn
-
-            #     # if enemy king in check, check if checkmate
-            #     if board[rank - 1][file] == -player * KING_ID:
-            #         # don't add drop move if results in checkmate
-            #         if checkmate_check(rotate_board(new_board), -player):
-            #             continue
-
-            # if captured_piece == LANCE_ID and rank == 0:
-            #     continue
-
-            # if captured_piece == KNIGHT_ID and rank <= 1:
-            #     continue
-
-            # # if valid drop, add to drops array
-            # drops.append(Move((-1, captured_piece), (rank, file)))
 
     return drops
 

@@ -3,6 +3,13 @@ from shogi_logic import *
 import numpy as np
 
 
+def print_moves(result):
+    for move in result:
+        row, col = move.piece
+        print(move.dest)
+        print(move.promote)
+
+
 class TestShogiMethods(unittest.TestCase):
     def setUp(self):
         self.pawn_board = np.array(
@@ -35,6 +42,19 @@ class TestShogiMethods(unittest.TestCase):
         )
         self.check2 = np.copy(self.default_board)
         self.check2[6][4] = -ROOK_ID
+        self.pawn_prom = np.array(
+            [
+                [-PAWN_ID] + 8 * [0],
+                [PAWN_ID] + 8 * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+                BOARD_SIZE * [0],
+            ]
+        )
 
     def test_check_owned(self):
         self.assertTrue(check_owned(1, 1))
@@ -70,6 +90,9 @@ class TestShogiMethods(unittest.TestCase):
         self.assertEqual(len(result), 2)
         result = get_moves(self.check2, 1, {})
         self.assertEqual(len(result), 5)
+        result = get_moves(self.pawn_prom, 1, {})
+        print_moves(result)
+        self.assertEqual(len(result), 1)
 
 
 if __name__ == "__main__":
