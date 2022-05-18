@@ -12,7 +12,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             table { border-spacing: 0; border-collapse: collapse; margin-left: auto; margin-right: auto;}
-            #shogi-board th { padding: .5em; }
+            #shogi-board th { padding: .5em; text-align: center;}
             td { border: 1px solid; width: 4em; height: 4em; }
             td.light { background: #eee; }
             td.move-dest { background: #eee radial-gradient(rgba(20,85,30,0.5) 19%, rgba(0,0,0,0) 20%)}
@@ -24,6 +24,16 @@
             font-size: 1em; position:absolute;}
             .valid {opacity:1;}
             #top-pieces .valid:after {transform: scaleY(-1); bottom:43px}
+            .modal {display: none; z-index: 1; width: fit-content; height: 100%;
+            position: fixed; left:0; top:0}
+            .modal-content {background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;}
+            .modal-btn {cursor: pointer}
+            #cancel {float: right}
+            #cancel:hover, #cancel:focus {color: black; cursor: pointer}
         </style>
         <link rel="stylesheet" href="">
     </head>
@@ -181,6 +191,14 @@
                 </tr>
             </tbody>
         </table>
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span id="cancel">&times;</span> <br>
+                Promote? <br>
+                <button class="modal-btn" id="prom-accept">Yes</button>
+                <button class="modal-btn" id="prom-reject">No</button>
+            </div>
+        </div>
         <a href="index.html">Back to main menu</a>
         <script src="gamelogic.js"></script>
         <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
@@ -188,8 +206,11 @@
             const socket = io.connect("http://localhost:5000");
             const topPieces = document.getElementById("top-pieces");
             const bottom = document.getElementById("bottom-pieces");
+            const modal = document.getElementById("myModal");
+            // used for saving destination cell for promotion moves
+            let currDest;
 
-            // handles what happens when a piece is clicked
+            // handles what happens when a piece on the board is clicked
             const playerPieceListener = (piece) => {
                 const rowNum = parseInt(piece.parentElement.parentElement.rowIndex);
                 const colNum = parseInt(piece.parentElement.cellIndex)
@@ -249,6 +270,7 @@
                     capCell.classList.remove("valid");
             }
 
+            // given the piece's html element, promote it
             const promotePiece = (movingPiece) => {
                 const prevClass = movingPiece.getAttribute('class').split(" ");
                 const prevPiece = prevClass[PIECE_NAME];
@@ -256,6 +278,37 @@
                 movingPiece.setAttribute('src', pieceArt[pieceMap[newInd]]);
                 prevClass[PIECE_NAME] = pieceMap[newInd]
                 movingPiece.setAttribute('class', prevClass.join(' '));
+            }
+
+            const sendMove = () => {
+                currentPlayer *= -1;
+                const data = {'board': getBoard(), 'color': currentPlayer,
+                    'captured_dict': capturedPieces[currentPlayer]}
+                socket.emit("get move", data);
+            }
+
+            // handles player's choice of promotion
+            document.getElementById("cancel").onclick = () => {
+                modal.style.display = "none";
+            };
+
+            document.getElementById("prom-accept").onclick = () => {
+                modal.style.display = "none";
+                const htmlPiece = htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild;
+                promotePiece(htmlPiece);
+                if (currDest.firstChild)
+                    removePiece(currDest, bottom)
+                currDest.appendChild(htmlPiece);
+                sendMove();
+            }
+
+            document.getElementById("prom-reject").onclick = () => {
+                modal.style.display = "none";
+                const htmlPiece = htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild;
+                if (currDest.firstChild)
+                    removePiece(currDest, bottom)
+                currDest.appendChild(htmlPiece);
+                sendMove();
             }
 
             // processes incoming move from backend model
@@ -271,12 +324,6 @@
                     const movingPiece = htmlBoard.rows[move[0][0] + 1].cells[move[0][1]].firstChild;
                     if (move[2]) {
                         promotePiece(movingPiece);
-                        // const prevClass = movingPiece.getAttribute('class').split(" ");
-                        // const prevPiece = prevClass[PIECE_NAME];
-                        // const newInd = pieceMap.indexOf(prevPiece) + 6;
-                        // movingPiece.setAttribute('src', pieceArt[pieceMap[newInd]]);
-                        // prevClass[PIECE_NAME] = pieceMap[newInd]
-                        // movingPiece.setAttribute('class', prevClass.join(' '));
                     }
                     cell.appendChild(movingPiece);
                 }
@@ -338,11 +385,19 @@
 
                         const htmlPiece = htmlBoard.rows[selectedPiece[0]].cells[selectedPiece[1]].firstChild;
                         if (cell.classList.contains("promote")) {
+                            // force promotion
                             if (parseInt(cell.getAttribute('visited')) < 2) {
                                 promotePiece(htmlPiece);
                             }
+                            // enables player to choose if they promote
                             else {
-                                console.log("implement choice");
+                                currDest = cell;
+                                const pos = cell.getBoundingClientRect();
+                                modal.style.top = `${Math.floor(pos.top)}px`;
+                                modal.style.left = `${Math.floor(pos.left)}px`;
+                                console.log(pos.top);
+                                modal.style.display = 'block';
+                                return;
                             }
                         }
 
@@ -352,10 +407,7 @@
                         }
                         cell.appendChild(htmlPiece);
                     }
-                    currentPlayer *= -1;
-                    const data = {'board': getBoard(), 'color': currentPlayer,
-                    'captured_dict': capturedPieces[currentPlayer]}
-                    socket.emit("get move", data);
+                    sendMove();
                 });
             })
         </script>
