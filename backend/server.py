@@ -28,6 +28,10 @@ def move_to_arr(move: Move):
     return [list(move.piece), list(move.dest), move.promote]
 
 
+def process_dict(captured_dict: dict):
+    return {int(k): int(v) for k, v in captured_dict.items()}
+
+
 # given a piece and the board, calculate possible moves in the position
 @socketio.on("move")
 def send_moves(data):
@@ -52,20 +56,38 @@ def send_moves(data):
 
 @socketio.on("get move")
 def model_move(data):
-    captured_dict = {int(k): int(v) for k, v in data["captured_dict"].items()}
+    model_captured_dict = process_dict(data["model_captured_dict"])
+    board = rotate_board(np.array(data["board"]))
+    player = data["color"]
     moves = get_moves(
-        rotate_board(np.array(data["board"])),
-        data["color"],
-        captured_dict,
+        board,
+        player,
+        model_captured_dict,
     )
+
+    # sends lost signal for model player
+    if len(moves) == 0:
+        emit("model lost")
+        return
+
+    # randomly sample move
+    # replace this with actual model later
     move = random.choice(moves)
+
+    new_board = rotate_board(move_to_board(board, player, move))
+    player_captured_dict = process_dict(data["player_captured_dict"])
+    player_moves = get_moves(new_board, -player, player_captured_dict)
+    if len(player_moves) == 0:
+        emit("player lost")
+        return
+
     new_start = move.piece
     if move.piece[0] != -1:
         new_start = (8 - move.piece[0], 8 - move.piece[1])
-
     new_dest = (8 - move.dest[0], 8 - move.dest[1])
     move = move_to_arr(Move(new_start, new_dest, move.promote))
     print(move)
+
     emit("model move", move)
 
 

@@ -283,7 +283,8 @@
             const sendMove = () => {
                 currentPlayer *= -1;
                 const data = {'board': getBoard(), 'color': currentPlayer,
-                    'captured_dict': capturedPieces[currentPlayer]}
+                    'model_captured_dict': capturedPieces[currentPlayer],
+                    'player_captured_dict': capturedPieces[-currentPlayer]}
                 socket.emit("get move", data);
             }
 
@@ -347,6 +348,15 @@
                 })
             });
 
+            // need to come up with a better "game end" function
+            socket.on("model lost", function () {
+                console.log("you won!");
+            });
+
+            socket.on("player lost", function () {
+                console.log("you lost!");
+            });
+
             // adds listener to player's pieces
             document.querySelectorAll('.piece').forEach((piece) => {
                 if (piece.classList.contains(playerColorStr)) {
@@ -395,7 +405,6 @@
                                 const pos = cell.getBoundingClientRect();
                                 modal.style.top = `${Math.floor(pos.top)}px`;
                                 modal.style.left = `${Math.floor(pos.left)}px`;
-                                console.log(pos.top);
                                 modal.style.display = 'block';
                                 return;
                             }
