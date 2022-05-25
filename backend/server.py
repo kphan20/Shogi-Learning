@@ -1,6 +1,6 @@
 import random
 from flask import Flask
-from flask_socketio import SocketIO, send, emit
+from flask_socketio import SocketIO, emit
 from shogi_logic import (
     Move,
     find_moves_for_piece,
