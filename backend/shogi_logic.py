@@ -575,20 +575,15 @@ def check_check(board: NDArray, player: int) -> bool:
     Returns:
         bool: whether player is in check or not
     """
-    result = False
 
     for rank, row in enumerate(board):
         for file, piece in enumerate(row):
             # checks if piece belongs to opposing player
             if player * piece < 0:
-                result = find_moves_for_piece_check(board, player, rank, file)
                 # breaks if player's king is in check
-                if result:
-                    break
-        if result:
-            break
-
-    return result
+                if find_moves_for_piece_check(board, player, rank, file):
+                    return True
+    return False
 
 
 # METHODS ONLY USED BY FRONTEND CLIENT

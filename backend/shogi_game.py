@@ -1,8 +1,9 @@
+from __future__ import annotations
+import torch
 from variables import *
 import numpy as np
 from shogi_logic import *
 from numpy.typing import NDArray
-from __future__ import annotations
 
 # possible number of moves starting from each square
 PLANE_SIZE = 139
@@ -110,7 +111,7 @@ class ShogiGame:
                             offset += NW_OFFSET + -x_diff
                         else:
                             offset += NE_OFFSET + y_diff
-            valids[offset] = 1
+            valids[int(offset)] = 1
         return valids
 
     # assuming that a is from perspective of current player
@@ -181,3 +182,23 @@ class ShogiGame:
     # maybe find better alternative
     def toString(self):
         return str(self.__dict__)
+
+    def toTensor(self):
+        layers = []
+        board = self.board
+        player = self.current_player
+        piece_iter = range(KING_ID, PROM_PAWN_ID + 1)
+        for piece in piece_iter:
+            layers.append(torch.from_numpy(np.where(board == player * piece, 1, 0)))
+        for piece in piece_iter:
+            layers.append(torch.from_numpy(np.where(board == -player * piece, 1, 0)))
+        caps = self.captured_pieces[player]
+        for piece in range(GOLD_GEN_ID, PAWN_ID + 1):
+            layers.append(torch.full((9, 9), caps[piece]))
+        caps = self.captured_pieces[-player]
+        for piece in range(GOLD_GEN_ID, PAWN_ID + 1):
+            layers.append(torch.full((9, 9), caps[piece]))
+        layers.append(torch.full((9, 9), (player + 1) / 2))
+        return torch.stack(layers)
+
+

@@ -5,7 +5,6 @@ import numpy as np
 
 def print_moves(result):
     for move in result:
-        row, col = move.piece
         print(move.dest)
         print(move.promote)
 
@@ -66,32 +65,29 @@ class TestShogiMethods(unittest.TestCase):
         pass
 
     def test_get_moves(self):
-        result = get_moves(self.default_board, 1, {})
+        # tests with standard starting position
+        result = get_moves(self.default_board, BLACK, {})
         self.assertEqual(len(result), 30)
-        result = get_moves(rotate_board(self.default_board), -1, {})
+
+        # rotates starting position so white is starting
+        result = get_moves(rotate_board(self.default_board), WHITE, {})
         self.assertEqual(len(result), 30)
-        result = get_moves(self.empty_board, 1, {PAWN_ID: 1})
-        # pieces = {}
-        # for move in result:
-        #     row, col = move.piece
-        #     print(move.dest)
-        #     print(move.promote)
-        #     piece_id = self.empty_board[row][col]
-        #     if pieces.get(piece_id):
-        #         pieces[piece_id] += 1
-        #     else:
-        #         pieces[piece_id] = 1
-        #     if piece_id == -SILVER_GEN_ID:
-        #         print(move.dest)
-        # print(pieces)
-        # print(self.empty_board)
+
+        # testing pawn drops on empty board
+        result = get_moves(self.empty_board, BLACK, {PAWN_ID: 1})
         self.assertEqual(len(result), 72)
-        result = get_moves(self.check, 1, {})
+
+        # first under check test (king and rook on board)
+        result = get_moves(self.check, BLACK, {})
         self.assertEqual(len(result), 2)
-        result = get_moves(self.check2, 1, {})
+
+        # second under check test (starting position with rook/king)
+        result = get_moves(self.check2, BLACK, {})
         self.assertEqual(len(result), 5)
-        result = get_moves(self.pawn_prom, 1, {})
-        print_moves(result)
+
+        # tests pawn force promotion
+        result = get_moves(self.pawn_prom, BLACK, {})
+        # print_moves(result)
         self.assertEqual(len(result), 1)
 
 
