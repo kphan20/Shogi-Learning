@@ -133,25 +133,3 @@ class MCTS:
         for action, count in action_dict.items():
             policy[action] = count
         return policy / self.Ns[state]
-
-
-from model import ResCNN
-import time
-from shogi_game import action_to_move
-
-# sys.setrecursionlimit(3000)
-
-game = ShogiGame()
-total_time = 0
-string = game.toString()
-for i in range(1):
-    test = MCTS(ResCNN(2))
-    start = time.time()
-    for _ in range(3):
-        # print(f"iteration {_}")
-        test.search(game)
-    total_time += time.time() - start
-print(total_time)
-results = np.argwhere(test.getPolicy(string)).flatten()
-for result in results:
-    print(action_to_move(result))
