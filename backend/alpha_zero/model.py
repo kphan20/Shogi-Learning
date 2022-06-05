@@ -75,7 +75,7 @@ class ValueHead(nn.Module):
         )
 
 
-BOARD_PLANES = 43
+BOARD_PLANES = 43 * 2
 
 
 class ResCNN(nn.Module):
