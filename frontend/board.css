@@ -1,0 +1,76 @@
+table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+}
+#shogi-board th {
+  padding: 0.5em;
+  text-align: center;
+}
+td {
+  border: 1px solid;
+  width: 4em;
+  height: 4em;
+}
+td.light {
+  background: #eee;
+}
+td.move-dest {
+  background: #eee
+    radial-gradient(rgba(20, 85, 30, 0.5) 19%, rgba(0, 0, 0, 0) 20%);
+}
+.drop-piece {
+  opacity: 0.2;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  position: relative;
+}
+.valid:after {
+  content: attr(counter);
+  background: #d64f00;
+  color: #fff;
+  bottom: 0;
+  right: 0;
+  line-height: 0.9em;
+  padding: 3px 0.3em;
+  font-weight: bold;
+  font-size: 1em;
+  position: absolute;
+}
+.valid {
+  opacity: 1;
+}
+#top-pieces .valid:after {
+  transform: scaleY(-1);
+  bottom: 43px;
+}
+.modal {
+  display: none;
+  z-index: 1;
+  width: fit-content;
+  height: 100%;
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+.modal-btn {
+  cursor: pointer;
+}
+#cancel {
+  float: right;
+}
+#cancel:hover,
+#cancel:focus {
+  color: black;
+  cursor: pointer;
+}
