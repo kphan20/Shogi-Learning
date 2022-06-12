@@ -41,10 +41,22 @@ Install the dependencies in the requirements.txt file. Be warned that I included
 pip install -r requirements.txt
 ```
 
+If using flask, you can run the server with python:
+
+```
+python server.py
+```
+
 ### Frontend
 
 Within the frontend folder, to install the dependencies (mainly Electron), you can use npm:
 
 ```
 npm install
+```
+
+To start electron, issue the start command:
+
+```
+npm start
 ```
