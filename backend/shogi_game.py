@@ -35,11 +35,15 @@ class ShogiGame:
         captured_pieces={BLACK: dict(CAPTURED_DICT), WHITE: dict(CAPTURED_DICT)},
         board=DEFAULT_BOARD,
         current_player=BLACK,
+        prev_state=None,
     ):
         # initializing captured pieces
         self.captured_pieces = captured_pieces
         self.board = board
         self.current_player = current_player
+        self.prev_state = prev_state
+        if not prev_state:
+            self.prev_state = self
 
     def getGameEnded(self) -> bool:
         """
@@ -181,24 +185,41 @@ class ShogiGame:
 
     # maybe find better alternative
     def toString(self):
-        return str(self.__dict__)
+        data = dict(self.__dict__)
+        del data["prev_state"]
+        return str(data)
 
     def toTensor(self):
         layers = []
+        piece_iter = range(KING_ID, PROM_PAWN_ID + 1)
+        prev = self.prev_state
+        self._toTensor(
+            piece_iter, layers, prev.board, prev.current_player, prev.captured_pieces
+        )
         board = self.board
         player = self.current_player
-        piece_iter = range(KING_ID, PROM_PAWN_ID + 1)
+        caps = self.captured_pieces
+        self._toTensor(piece_iter, layers, board, player, caps)
+        return torch.stack(layers)
+
+    def _toTensor(
+        self,
+        piece_iter: range,
+        layers: list,
+        board: NDArray,
+        player: int,
+        captured_pieces: dict,
+    ):
         for piece in piece_iter:
             layers.append(torch.from_numpy(np.where(board == player * piece, 1, 0)))
         for piece in piece_iter:
             layers.append(torch.from_numpy(np.where(board == -player * piece, 1, 0)))
-        caps = self.captured_pieces[player]
+        caps = captured_pieces[player]
         for piece in range(GOLD_GEN_ID, PAWN_ID + 1):
             layers.append(torch.full((9, 9), caps[piece]))
-        caps = self.captured_pieces[-player]
+        caps = captured_pieces[-player]
         for piece in range(GOLD_GEN_ID, PAWN_ID + 1):
             layers.append(torch.full((9, 9), caps[piece]))
         layers.append(torch.full((9, 9), (player + 1) / 2))
-        return torch.stack(layers)
 
 
