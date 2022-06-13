@@ -2,7 +2,7 @@ import torch
 from torch import optim
 import numpy as np
 import sys
-from mcts_copy import MCTS
+from mcts_iter import MCTS
 
 sys.path.append("./..")
 from shogi_game import ShogiGame
@@ -140,3 +140,8 @@ def policy_loss(target: torch.Tensor, sample: torch.Tensor):
 # (target - sample)**2
 def value_loss(target: torch.Tensor, sample: torch.Tensor):
     return torch.sum((target - sample.view(-1)) ** 2) / target.size()[0]
+
+
+# testing code
+nn = ResCNN(2)
+episode(nn, 20)
