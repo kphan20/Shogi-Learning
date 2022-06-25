@@ -75,6 +75,7 @@ class ValueHead(nn.Module):
         )
 
 
+# represents that number of layers from each boards toTensor call
 BOARD_PLANES = 43 * 2
 
 
@@ -87,7 +88,6 @@ class ResCNN(nn.Module):
         self.conv = nn.Conv2d(BOARD_PLANES, first_conv_out, 3)
         self.conv_bn = nn.BatchNorm2d(first_conv_out)
         self.renl = F.gelu
-        self.res_block = ResBlock()
         res_blocks = [ResBlock() for _ in range(res_layers)]
         self.res_blocks = nn.ModuleList(res_blocks)
         self.policy_head = PolicyHead()
