@@ -107,27 +107,34 @@ def episode(nn: ResCNN, sims):
             return examples
 
 
-def train(examples, nn: ResCNN, epochs, batch_size):
+def train(examples, nn: ResCNN, epochs, batch_size, device: torch.device):
     # add gpu stuff later
     opt = optim.Adam(nn.parameters())
     examples_len = len(examples)
     batch_count = examples_len // batch_size
+    nn.to(device)
 
     for _ in range(epochs):
         nn.train()
-
         for _ in range(batch_count):
             samples = np.random.randint(examples_len, size=batch_size)
             boards, pis, vs = list(zip(*[examples[i] for i in samples]))
             boards = torch.stack(boards)
 
+            boards, pis, vs = (
+                boards.to(device),
+                torch.FloatTensor(np.array(pis)).to(device),
+                torch.FloatTensor(np.array(vs).astype(np.float64)).to(device),
+            )
+
             out_pi, out_v = nn(boards)
 
             total_loss = policy_loss(pis, out_pi) + value_loss(vs, out_v)
-
+            # print(total_loss)
             opt.zero_grad()
             total_loss.backward()
             opt.step()
+    save_checkpoint(nn, opt)
 
 
 # policy loss as defined in alpha zero paper
@@ -142,6 +149,27 @@ def value_loss(target: torch.Tensor, sample: torch.Tensor):
     return torch.sum((target - sample.view(-1)) ** 2) / target.size()[0]
 
 
-# testing code
-nn = ResCNN(2)
-episode(nn, 20)
+def save_checkpoint(
+    nnet: ResCNN, optimizer: optim.Optimizer, path="checkpoints/checkpoint.pth"
+):
+    torch.save(
+        {
+            "model_state_dict": nnet.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+        },
+        path,
+    )
+
+
+def load_checkpoint(
+    nnet: ResCNN, path="checkpoints/checkpoint.pth", optimizer: optim.Optimizer = None
+):
+    # look into map location
+    checkpoint = torch.load(path, map_location=torch.device("cpu"))
+
+    if len(checkpoint["model_state_dict"]) != len(nnet.state_dict()):
+        raise ValueError("Invalid number of layers.")
+
+    nnet.load_state_dict(checkpoint["model_state_dict"])
+    if optimizer:
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
