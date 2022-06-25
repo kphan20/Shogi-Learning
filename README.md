@@ -47,6 +47,12 @@ If using flask, you can run the server with python:
 python server.py
 ```
 
+In order to run the unit tests, run
+
+```
+python -m unittest
+```
+
 ### Frontend
 
 Within the frontend folder, to install the dependencies (mainly Electron), you can use npm:
