@@ -1,3 +1,4 @@
+from typing import list
 from dataclasses import dataclass
 from variables import *
 import numpy as np
@@ -10,6 +11,8 @@ class Move:
     dest: tuple
     promote: bool
 
+    # by convention, drops are represented with piece tuple being in
+    # the format (-1, piece id)
     def __init__(self, piece: tuple, dest: tuple, promote: bool = False):
         self.piece = piece
         self.dest = dest
