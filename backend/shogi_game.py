@@ -29,6 +29,45 @@ NE_OFFSET = 48
 N_OFFSET = 56
 
 
+def move_to_action(move: Move):
+    offset = PLANE_SIZE * (BOARD_SIZE * move.piece[0] + move.piece[1])
+    # handles drop moves
+    if move.piece[0] == -1:
+        offset = PLANE_SIZE * (BOARD_SIZE * move.dest[0] + move.dest[1])
+        offset += DROP_OFFSET + move.piece[1] - 2
+    else:
+        x_diff = move.dest[0] - move.piece[0]
+        y_diff = move.dest[1] - move.piece[1]
+        # handles knight moves
+        if x_diff == -2 and (y_diff + 1) % 2 == 0:
+            offset += (
+                KNIGHT_OFFSET + (y_diff + 1) / 2 + move.promote * KNIGHT_PROM_OFFSET
+            )
+        # queen moves
+        else:
+            offset += QUEEN_OFFSET + move.promote * QUEEN_PROM_OFFSET
+            if x_diff == 0:
+                if y_diff < 0:
+                    offset += W_OFFSET + -y_diff
+                else:
+                    offset += E_OFFSET + y_diff
+            elif x_diff > 0:
+                if y_diff == 0:
+                    offset += S_OFFSET + x_diff
+                elif y_diff < 0:
+                    offset += SW_OFFSET + x_diff
+                else:
+                    offset += SE_OFFSET + x_diff
+            else:
+                if y_diff == 0:
+                    offset += N_OFFSET + -x_diff
+                elif y_diff < 0:
+                    offset += NW_OFFSET + -x_diff
+                else:
+                    offset += NE_OFFSET + y_diff
+    return offset
+
+
 class ShogiGame:
     def __init__(
         self,
@@ -79,42 +118,7 @@ class ShogiGame:
         # this all assumes that the board is from the perspective of the
         # current player
         for move in moves:
-            offset = PLANE_SIZE * (BOARD_SIZE * move.piece[0] + move.piece[1])
-            # handles drop moves
-            if move.dest[0] == -1:
-                offset += DROP_OFFSET + move.dest[1] - 2
-            else:
-                x_diff = move.dest[0] - move.piece[0]
-                y_diff = move.dest[1] - move.piece[1]
-                # handles knight moves
-                if x_diff == -2 and (y_diff + 1) % 2 == 0:
-                    offset += (
-                        KNIGHT_OFFSET
-                        + (y_diff + 1) / 2
-                        + move.promote * KNIGHT_PROM_OFFSET
-                    )
-                # queen moves
-                else:
-                    offset += QUEEN_OFFSET + move.promote * QUEEN_PROM_OFFSET
-                    if x_diff == 0:
-                        if y_diff < 0:
-                            offset += W_OFFSET + -y_diff
-                        else:
-                            offset += E_OFFSET + y_diff
-                    elif x_diff > 0:
-                        if y_diff == 0:
-                            offset += S_OFFSET + x_diff
-                        elif y_diff < 0:
-                            offset += SW_OFFSET + x_diff
-                        else:
-                            offset += SE_OFFSET + x_diff
-                    else:
-                        if y_diff == 0:
-                            offset += N_OFFSET + -x_diff
-                        elif y_diff < 0:
-                            offset += NW_OFFSET + -x_diff
-                        else:
-                            offset += NE_OFFSET + y_diff
+            offset = move_to_action(move)
             valids[int(offset)] = 1
         return valids
 
@@ -144,7 +148,8 @@ class ShogiGame:
         # implementation inspired by AlphaZero paper
         # case where move is a drop
         if offset >= DROP_OFFSET:
-            dest = (-1, offset - DROP_OFFSET + 2)
+            dest = (start_x, start_y)
+            start_x, start_y = -1, offset - DROP_OFFSET + 2
             prom = False
             # removes dropped piece from hand
             self.captured_pieces[self.current_player][dest[1]] -= 1
