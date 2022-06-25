@@ -3,7 +3,6 @@ import torch
 import unittest
 
 sys.path.append("./..")
-# sys.path.append('../alpha_zero')
 from shogi_game import ShogiGame
 from alpha_zero.model import ResCNN
 from variables import ACTION_SIZE
