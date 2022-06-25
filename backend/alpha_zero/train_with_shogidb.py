@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("./..")
 from shogidb2.generate_examples import retrieve_games
-from time import time
+from time import time, sleep
 import torch
 from model import ResCNN
 from alpha_zero_training import train
@@ -12,6 +12,7 @@ from multiprocessing import Process, SimpleQueue as Queue
 def retrieve_games_wrapper(start, end, queue):
     retrieve_games(start, end, queue)
     queue.put("STOP")
+    sleep(1)
 
 
 def train_with_queue(queue, nn, epochs, batch_size, device):
@@ -34,6 +35,5 @@ if __name__ == "__main__":
     get_p.start()
 
     train_with_queue(q, nn, 10, 32, device)
-    get_p.join()
 
     print(f"Training took {time() - start} seconds.")
