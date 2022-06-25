@@ -1,22 +1,17 @@
-from typing import list
+from typing import List
 from dataclasses import dataclass
 from variables import *
 import numpy as np
 from numpy.typing import NDArray
 
 # Used to represent a move
-@dataclass
+# by convention, drops are represented with piece tuple being in
+# the format (-1, piece id)
+@dataclass(frozen=True)
 class Move:
     piece: tuple
     dest: tuple
-    promote: bool
-
-    # by convention, drops are represented with piece tuple being in
-    # the format (-1, piece id)
-    def __init__(self, piece: tuple, dest: tuple, promote: bool = False):
-        self.piece = piece
-        self.dest = dest
-        self.promote = promote
+    promote: bool = False
 
 
 """
@@ -106,7 +101,7 @@ def move_to_board(board: NDArray, player: int, move: Move) -> NDArray:
     return new_board
 
 
-def get_moves(board: NDArray, player: int, cap_pieces: dict) -> list[Move]:
+def get_moves(board: NDArray, player: int, cap_pieces: dict) -> List[Move]:
     """
     Gets all moves a player can do
 
@@ -160,7 +155,7 @@ def force_promote(piece: int, rank: int) -> bool:
 
 def iterate_direction(
     board: NDArray, player: int, rank: int, file: int, move: tuple, prom: bool
-) -> list[Move]:
+) -> List[Move]:
     """
     Adds moves for pieces that can move multiple tiles in a single direction
 
@@ -230,9 +225,9 @@ def get_piece_moves(
     player: int,
     rank: int,
     file: int,
-    move_set: list[tuple],
+    move_set: List[tuple],
     prom: bool,
-) -> list[Move]:
+) -> List[Move]:
     """
     Given the piece's move set and whether it can promote, create moves
 
@@ -278,7 +273,7 @@ def get_piece_moves(
 
 def find_moves_for_piece(
     board: NDArray, player: int, rank: int, file: int
-) -> list[Move]:
+) -> List[Move]:
     """
     Skeleton function that gets moves for specific piece it encounters
 
@@ -333,7 +328,7 @@ def find_moves_for_piece(
 
 
 def add_drops_piece(
-    board: NDArray, player: int, rank: int, file: int, piece: int, drops: list[Move]
+    board: NDArray, player: int, rank: int, file: int, piece: int, drops: List[Move]
 ):
     """
     For a given piece and square, add a drop move to drops if piece can
@@ -380,7 +375,7 @@ def add_drops_piece(
 
 def add_drops(
     board: NDArray, player: int, rank: int, file: int, captured_pieces: dict
-) -> list[Move]:
+) -> List[Move]:
     """
     Gets drops that are possible on an empty tile.
 
@@ -462,7 +457,7 @@ def iterate_direction_check(
 
 
 def get_piece_moves_check(
-    board: NDArray, player: int, rank: int, file: int, move_set: list[tuple]
+    board: NDArray, player: int, rank: int, file: int, move_set: List[tuple]
 ) -> bool:
     """
     Checks if player's king lies in range of enemy piece. Board is
