@@ -2,6 +2,7 @@ import torch
 from torch import optim
 import numpy as np
 import sys
+import os
 from mcts_iter import MCTS
 
 sys.path.append("./..")
@@ -150,14 +151,16 @@ def value_loss(target: torch.Tensor, sample: torch.Tensor):
 
 
 def save_checkpoint(
-    nnet: ResCNN, optimizer: optim.Optimizer, path="checkpoints/checkpoint.pth"
+    nnet: ResCNN, optimizer: optim.Optimizer, filename="checkpoint.pth"
 ):
+    if not os.path.exists("checkpoints"):
+        os.mkdir("checkpoints")
     torch.save(
         {
             "model_state_dict": nnet.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
         },
-        path,
+        os.path.join("checkpoints", filename),
     )
 
 
