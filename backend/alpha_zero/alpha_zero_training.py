@@ -108,15 +108,18 @@ def episode(nn: ResCNN, sims):
             return examples
 
 
-def train(examples, nn: ResCNN, epochs, batch_size, device: torch.device):
-    # add gpu stuff later
-    opt = optim.Adam(nn.parameters())
+def train(
+    examples, nn: ResCNN, opt: optim.Optimizer, epochs, batch_size, device: torch.device
+):
+    # opt = optim.Adam(nn.parameters())
     examples_len = len(examples)
     batch_count = examples_len // batch_size
     nn.to(device)
-
+    losses = []
     for _ in range(epochs):
         nn.train()
+        epoch_loss = 0
+        epoch_steps = 0
         for _ in range(batch_count):
             samples = np.random.randint(examples_len, size=batch_size)
             boards, pis, vs = list(zip(*[examples[i] for i in samples]))
@@ -135,7 +138,12 @@ def train(examples, nn: ResCNN, epochs, batch_size, device: torch.device):
             opt.zero_grad()
             total_loss.backward()
             opt.step()
+
+            epoch_loss += total_loss.item()
+            epoch_steps += 1
+        losses.append(epoch_loss / epoch_steps)
     save_checkpoint(nn, opt)
+    return losses
 
 
 # policy loss as defined in alpha zero paper
