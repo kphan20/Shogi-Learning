@@ -34,5 +34,6 @@ if __name__ == "__main__":
     get_p.start()
 
     train_with_queue(q, nn, 10, 32, device)
+    get_p.join()
 
     print(f"Training took {time() - start} seconds.")
