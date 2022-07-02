@@ -34,7 +34,7 @@ class PolicyHead(nn.Module):
     def __init__(self) -> None:
         super(PolicyHead, self).__init__()
         # need to find how many in channels from residual net
-        self.conv = nn.Conv2d(head_in_channels, 2, 1)
+        self.conv = nn.Conv2d(head_in_channels, 2, 1, bias=False)
         self.conv_bn = nn.BatchNorm2d(2)
         self.renl = F.gelu
         self.size_linear = 7 * 7 * 2  # calculate this
@@ -51,7 +51,7 @@ class PolicyHead(nn.Module):
 class ValueHead(nn.Module):
     def __init__(self) -> None:
         super(ValueHead, self).__init__()
-        self.conv = nn.Conv2d(head_in_channels, 1, 1)
+        self.conv = nn.Conv2d(head_in_channels, 1, 1, bias=False)
         self.conv_bn = nn.BatchNorm2d(1)
         self.renl1 = F.gelu
         self.size_linear = 7 * 7
@@ -85,7 +85,7 @@ class ResCNN(nn.Module):
         # initial convolution - unsure of how many filters
         # and outputs
         first_conv_out = 256
-        self.conv = nn.Conv2d(BOARD_PLANES, first_conv_out, 3)
+        self.conv = nn.Conv2d(BOARD_PLANES, first_conv_out, 3, bias=False)
         self.conv_bn = nn.BatchNorm2d(first_conv_out)
         self.renl = F.gelu
         res_blocks = [ResBlock() for _ in range(res_layers)]

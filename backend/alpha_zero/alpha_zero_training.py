@@ -1,5 +1,6 @@
 import torch
 from torch import optim
+from torch.utils.data import DataLoader, DataLoader2
 import numpy as np
 import sys
 import os
@@ -141,6 +142,45 @@ def train(
 
             epoch_loss += total_loss.item()
             epoch_steps += 1
+        losses.append(epoch_loss / epoch_steps)
+    save_checkpoint(nn, opt)
+    return losses
+
+
+def train_with_dataloader(
+    data_loader: DataLoader,
+    nn: ResCNN,
+    opt: optim.Optimizer,
+    epochs,
+    device: torch.device,
+):
+    nn.to(device)
+    losses = []
+    for epoch in range(epochs):
+        nn.train()
+        epoch_loss = 0
+        epoch_steps = 0
+        print(f"epoch {epoch}")
+        for data in data_loader:
+            boards, pis, vs = data
+
+            boards, pis, vs = (
+                boards.to(device),
+                pis.to(device),
+                vs.float().to(device),
+            )
+
+            out_pi, out_v = nn(boards)
+
+            total_loss = policy_loss(pis, out_pi) + value_loss(vs, out_v)
+
+            opt.zero_grad(set_to_none=True)
+            total_loss.backward()
+            opt.step()
+
+            epoch_loss += total_loss.item()
+            epoch_steps += 1
+            print(epoch_steps)
         losses.append(epoch_loss / epoch_steps)
     save_checkpoint(nn, opt)
     return losses

@@ -1,6 +1,9 @@
 import numpy as np
 import requests
 import sys
+import csv
+import json
+import os
 
 sys.path.append("../")
 sys.path.append("../../")
@@ -24,7 +27,7 @@ from variables import (
     ROOK_ID,
     SILVER_GEN_ID,
 )
-from usi import fen_to_game
+from usi import fen_to_game, game_to_fen
 from shogi_game import move_to_action
 from shogi_logic import Move
 from multiprocessing import Queue
@@ -35,8 +38,9 @@ def generate_url(game_id):
 
 
 def retrieve_games(id_start, id_end, queue: Queue):
+    s = requests.Session()
     for game_id in range(id_start, id_end + 1):
-        response = requests.get(generate_url(game_id))
+        response = s.get(generate_url(game_id))
         data = response.json()
         queue.put(process_data(data))
 
@@ -103,3 +107,120 @@ def process_data(game_data):
         examples.append([current_game.toTensor(), policy, reward])
         current_player *= -1
     return examples
+
+
+def retrieve_games_to_csv(id_start, id_end):
+    s = requests.Session()
+    folder = "queries"
+    successful_ids = []
+    with open(
+        os.path.join(folder, f"{id_start}_to_{id_end}.csv"), "w", newline=""
+    ) as f:
+        writer = csv.writer(f)
+        for game_id in range(id_start, id_end + 1):
+            print(f"game {game_id}")
+            response = s.get(generate_url(game_id))
+            data = response.json()
+            examples = process_data_csv(data)
+
+            if len(examples) != 0:
+                writer.writerows(examples)
+                successful_ids.append(game_id)
+    with open(os.path.join(folder, f"{id_start}_{id_end}_successes.json"), "w") as f:
+        json.dump(successful_ids, f)
+
+
+def process_data_csv(game_data):
+    if game_data.get("evals") is None:
+        return []
+    moves = game_data["evals"]
+    examples = []
+    current_player = BLACK
+    prev_game = game_to_fen(ShogiGame())
+    for i in range(1, len(moves) - 1):
+        move = moves[i]
+        last_move = moves[i - 1]
+
+        current_game = last_move["sfen"]
+
+        suggested_move = move["bestmove"]["csa"]
+        position_score = move["bestmove"]["score"]
+
+        reward = (current_player * position_score > 0) * 2 - 1
+        examples.append([current_game, prev_game, suggested_move, reward])
+
+        prev_game = current_game
+        current_player *= -1
+    return examples
+
+
+import asyncio
+import aiohttp
+
+
+async def fetch(s: aiohttp.ClientSession, url):
+    async with s.get(url, ssl=False) as r:
+        return await r.json()
+
+
+async def fetch_all(s, start, end):
+    tasks = [
+        asyncio.create_task(fetch(s, generate_url(game_id)))
+        for game_id in range(start, end + 1)
+    ]
+    res = await asyncio.gather(*tasks)
+    return res
+
+
+async def main():
+    folder = "queries"
+    id_start = 100000
+    id_end = 199999
+    successful_ids = []
+    async with aiohttp.ClientSession() as s:
+        games = await fetch_all(s, id_start, id_end)
+        with open(
+            os.path.join(folder, f"{id_start}_to_{id_end}.csv"), "w", newline=""
+        ) as f:
+            writer = csv.writer(f)
+            for index, game in enumerate(games):
+                examples = process_data_csv(game)
+                game_id = id_start + index
+                if len(examples) != 0:
+                    writer.writerows(examples)
+                    successful_ids.append(game_id)
+    with open(os.path.join(folder, f"{id_start}_{id_end}_successes.json"), "w") as f:
+        json.dump(successful_ids, f)
+
+
+def load_csv(filename):
+    folder = "queries"
+    examples = []
+    with open(os.path.join(folder, filename), "r", newline="") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            current_game, prev_game, suggested_move, reward = row
+
+            current_game = fen_to_game(current_game)
+            prev_game = fen_to_game(prev_game)
+            current_game.prev_state = prev_game
+
+            suggested_move = move_to_action(csa_to_move(suggested_move, current_game))
+
+            policy = np.zeros(ACTION_SIZE)
+            policy[int(suggested_move)] = 1
+            examples.append([current_game.toTensor(), policy, int(reward)])
+    return examples
+
+
+def load_example(current_game, prev_game, suggested_move, reward):
+    current_game = fen_to_game(current_game)
+    prev_game = fen_to_game(prev_game)
+    current_game.prev_state = prev_game
+
+    suggested_move = move_to_action(csa_to_move(suggested_move, current_game))
+
+    policy = np.zeros(ACTION_SIZE)
+    policy[int(suggested_move)] = 1
+    example = [current_game.toTensor(), policy, int(reward)]
+    return example
