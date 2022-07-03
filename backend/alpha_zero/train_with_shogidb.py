@@ -10,6 +10,9 @@ from alpha_zero_training import train, train_with_dataloader
 from multiprocessing import Process, SimpleQueue as Queue
 from torch import optim
 import matplotlib.pyplot as plt
+from ray import tune
+from ray.tune import CLIReporter
+from ray.tune.schedulers import ASHAScheduler
 
 
 def retrieve_games_wrapper(start, end, queue):
@@ -74,29 +77,80 @@ def incremental_fetch(nn: ResCNN, opt: optim.Optimizer, device: torch.device):
     print(f"Training took {time() - start} seconds.")
 
 
-if __name__ == "__main__":
-    nn = ResCNN(19)
-    opt = optim.Adam(nn.parameters())
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    dataset = MovesDataset(os.path.join("shogidb2", "queries"))
+def load_data(data_dir):
+    dataset = MovesDataset(data_dir)
     train_length = len(dataset) // 3 * 2
-    train_set, val_set = random_split(
+    train_set, test_set = random_split(
         dataset, [train_length, len(dataset) - train_length]
     )
-    batch_size = 256
-    epochs = 10
-    train_loader = DataLoader(
-        train_set, batch_size=batch_size, shuffle=True, pin_memory=str(device) != "cpu"
-    )
-    test_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
+    return train_set, test_set
 
-    losses = train_with_dataloader(train_loader, nn, opt, epochs, device)
-    print(losses)
-    epoch = range(1, len(losses) + 1)
-    plt.xticks(epoch)
-    plt.plot(epoch, losses, "rx-")
-    plt.xlabel("Epoch number")
-    plt.ylabel("Training loss")
-    plt.title("Training loss over epochs")
-    plt.savefig("figure.png")
+
+def train_with_tuning(config, data_dir=None, checkpoint_dir=None):
+    nn = ResCNN(config["layers"])
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    opt = optim.Adam(nn.parameters(), lr=config["lr"])
+
+    if checkpoint_dir:
+        model_state, optimizer_state = torch.load(
+            os.path.join(checkpoint_dir, "checkpoint")
+        )
+        nn.load_state_dict(model_state)
+        opt.load_state_dict(optimizer_state)
+
+    train_set, test_set = load_data(data_dir)
+
+    train_loader = DataLoader(
+        train_set,
+        batch_size=config["batch_size"],
+        shuffle=True,
+        pin_memory=str(device) != "cpu",
+    )
+    # test_loader = DataLoader(test_set, batch_size=config["batch_size"], shuffle=False)
+
+    def checkpoint_func(epoch, nnet, optimizer, epoch_loss, epoch_steps):
+        with tune.checkpoint_dir(epoch) as checkpoint_dir:
+            path = os.path.join(checkpoint_dir, "checkpoint")
+            torch.save((nnet.state_dict(), optimizer.state_dict()), path)
+        tune.report(loss=(epoch_loss / epoch_steps))
+
+    losses = train_with_dataloader(train_loader, nn, opt, 10, device, checkpoint_func)
+    # return losses
+
+
+from functools import partial
+
+if __name__ == "__main__":
+    data_dir = os.path.join("shogidb2", "queries")
+    config = {
+        "layers": tune.randint(2, 16),
+        "lr": tune.loguniform(1e-4, 1e-1),
+        "batch_size": tune.choice([32, 64, 128, 256]),
+    }
+
+    scheduler = ASHAScheduler(
+        metric="loss", mode="min", max_t=10, grace_period=1, reduction_factor=2
+    )
+
+    reporter = CLIReporter(metric_columns=["loss", "training_iteration"])
+    result = tune.run(
+        partial(train_with_tuning, data_dir=data_dir),
+        config=config,
+        num_samples=10,
+        scheduler=scheduler,
+        progress_reporter=reporter,
+    )
+
+    best_trial = result.get_best_trial("loss", "min", "last")
+    print("Best trial config: {}".format(best_trial.config))
+    print("Best trial final training loss: {}".format(best_trial.last_result["loss"]))
+
+    print(os.path.join(best_trial.checkpoint.value, "checkpoint"))
+    # print(losses)
+    # epoch = range(1, len(losses) + 1)
+    # plt.xticks(epoch)
+    # plt.plot(epoch, losses, "rx-")
+    # plt.xlabel("Epoch number")
+    # plt.ylabel("Training loss")
+    # plt.title("Training loss over epochs")
+    # plt.savefig("figure.png")

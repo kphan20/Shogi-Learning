@@ -1,6 +1,6 @@
 import torch
 from torch import optim
-from torch.utils.data import DataLoader, DataLoader2
+from torch.utils.data import DataLoader
 import numpy as np
 import sys
 import os
@@ -8,6 +8,7 @@ from mcts_iter import MCTS
 
 sys.path.append("./..")
 from shogi_game import ShogiGame
+from shogi_logic import rotate_board
 from variables import ACTION_SIZE
 
 from model import ResCNN
@@ -32,31 +33,40 @@ def policyIter(iters, episodes, sims, nn: ResCNN = ResCNN(2)):
 def model_move(mcts: MCTS, num_iters, game: ShogiGame, action_choices):
     for _ in range(num_iters):
         mcts.search(game)
-    a = np.random.choice(action_choices, p=mcts.getPolicy(game.toString()))
+    a = np.random.choice(action_choices, p=mcts.getPolicy(game))
     return game.getNextState(a)
 
 
 # assumes games always start from default position
-def self_play(new_nnet, old_nnet):
+def self_play(new_nnet: ResCNN, old_nnet: ResCNN):
+    new_nnet.eval()
+    old_nnet.eval()
     new_mcts = MCTS(new_nnet)
     old_mcts = MCTS(old_nnet)
     game = ShogiGame()
-    num_games = 10
+    num_games = 1
     mcts_iters = 20
     win_count = 0
+    draws = 0
+    max_move_count = 300
     action_choices = np.arange(ACTION_SIZE)
 
     # games where new net goes first
     for _ in range(num_games):
+        moves = 0
         # could do optimization with do while loop
-        while not game.getGameEnded():
+        while moves < max_move_count and not game.getGameEnded():
             game = model_move(new_mcts, mcts_iters, game, action_choices)
-
+            moves += 1
             if game.getGameEnded():
                 win_count += 1
                 break
 
             game = model_move(old_mcts, mcts_iters, game, action_choices)
+            moves += 1
+            print(moves)
+        if not game.getGameEnded():
+            draws += 1
 
         game = ShogiGame()
 
@@ -64,18 +74,22 @@ def self_play(new_nnet, old_nnet):
     for _ in range(num_games):
         game = model_move(old_mcts, mcts_iters, game, action_choices)
 
-        while not game.getGameEnded():
+        moves = 1
+        while moves < max_move_count and not game.getGameEnded():
             game = model_move(new_mcts, mcts_iters, game, action_choices)
+            moves += 1
 
             if game.getGameEnded():
                 win_count += 1
                 break
 
             game = model_move(old_mcts, mcts_iters, game, action_choices)
-
+            moves += 1
+        if not game.getGameEnded():
+            draws += 1
         game = ShogiGame()
 
-    return win_count / (2 * num_games)
+    return win_count / (2 * num_games), draws
 
 
 def episode(nn: ResCNN, sims):
@@ -90,8 +104,8 @@ def episode(nn: ResCNN, sims):
     while True:
         for _ in range(sims):
             mcts.search(game)
-        s = game.toString()
-        policy = mcts.getPolicy(s)
+
+        policy = mcts.getPolicy(game)
 
         # putting in board tensor rather than string for not
         examples.append([game.toTensor(), policy, 0])  # placeholder reward
@@ -153,6 +167,7 @@ def train_with_dataloader(
     opt: optim.Optimizer,
     epochs,
     device: torch.device,
+    checkpoint_func: function = None,
 ):
     nn.to(device)
     losses = []
@@ -180,9 +195,11 @@ def train_with_dataloader(
 
             epoch_loss += total_loss.item()
             epoch_steps += 1
-            print(epoch_steps)
+            if epoch_steps % 50 == 49:
+                print(epoch_loss / epoch_steps)
         losses.append(epoch_loss / epoch_steps)
-    save_checkpoint(nn, opt)
+        if checkpoint_func:
+            checkpoint_func(epoch + 1, nn, opt, epoch_loss, epoch_steps)
     return losses
 
 
@@ -224,3 +241,34 @@ def load_checkpoint(
     nnet.load_state_dict(checkpoint["model_state_dict"])
     if optimizer:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+
+# trained_nn = ResCNN(19)
+# load_checkpoint(trained_nn)
+# base_nn = ResCNN(19)
+
+# print(self_play(trained_nn, base_nn))
+
+# from alpha_zero_training import load_checkpoint, policy_loss, value_loss
+
+# from shogi_game import ShogiGame
+
+# game = ShogiGame()
+
+# valids = game.getValidMoves()
+# nnet = ResCNN(19)
+# trained = ResCNN(19)
+# load_checkpoint(trained)
+
+# data = game.toTensor().expand(1, -1, -1, -1)
+# u_p, u_v = nnet(data)
+# t_p, t_v = trained(data)
+
+# print(np.sum(t_p.detach().numpy() * valids))
+# print(np.sum(u_p.detach().numpy() * valids))
+
+# print(u_v)
+# print(t_v)
+
+# print(f"first {policy_loss(t_p, u_p)}")
+# print(value_loss(t_v, u_v))
