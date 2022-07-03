@@ -139,6 +139,7 @@ if __name__ == "__main__":
         num_samples=10,
         scheduler=scheduler,
         progress_reporter=reporter,
+        resources_per_trial={"gpu": 1},
     )
 
     best_trial = result.get_best_trial("loss", "min", "last")

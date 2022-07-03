@@ -167,7 +167,7 @@ def train_with_dataloader(
     opt: optim.Optimizer,
     epochs,
     device: torch.device,
-    checkpoint_func: function = None,
+    checkpoint_func=None,
 ):
     nn.to(device)
     losses = []

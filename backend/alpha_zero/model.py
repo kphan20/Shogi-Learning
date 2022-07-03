@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import sys
+
+sys.path.append("./..")
 from variables import ACTION_SIZE
 
 res_block_in = 256
