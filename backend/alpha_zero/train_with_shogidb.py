@@ -118,14 +118,36 @@ def train_with_tuning(config, data_dir=None, checkpoint_dir=None):
     # return losses
 
 
+def train_without_tuning(batch_size, epochs):
+    nn = ResCNN(19)
+    opt = optim.Adam(nn.parameters())
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    train_set, test_set = load_data(os.path.join("shogidb2", "queries"))
+    train_loader = DataLoader(
+        train_set, batch_size=batch_size, shuffle=True, pin_memory=str(device) != "cpu"
+    )
+
+    losses = train_with_dataloader(train_loader, nn, opt, epochs, device)
+    print(losses)
+    epoch = range(1, len(losses) + 1)
+    plt.xticks(epoch)
+    plt.plot(epoch, losses, "rx-")
+    plt.xlabel("Epoch number")
+    plt.ylabel("Training loss")
+    plt.title("Training loss over epochs")
+    plt.savefig("figure.png")
+
+
 from functools import partial
 
-if __name__ == "__main__":
+
+def hyperparam_tuning():
     data_dir = os.path.join("shogidb2", "queries")
     config = {
-        "layers": tune.randint(2, 16),
+        "layers": tune.grid_search([2, 4, 6, 9, 12]),
         "lr": tune.loguniform(1e-4, 1e-1),
-        "batch_size": tune.choice([32, 64, 128, 256]),
+        "batch_size": tune.grid_search([64, 128, 256]),
     }
 
     scheduler = ASHAScheduler(
@@ -147,11 +169,8 @@ if __name__ == "__main__":
     print("Best trial final training loss: {}".format(best_trial.last_result["loss"]))
 
     print(os.path.join(best_trial.checkpoint.value, "checkpoint"))
-    # print(losses)
-    # epoch = range(1, len(losses) + 1)
-    # plt.xticks(epoch)
-    # plt.plot(epoch, losses, "rx-")
-    # plt.xlabel("Epoch number")
-    # plt.ylabel("Training loss")
-    # plt.title("Training loss over epochs")
-    # plt.savefig("figure.png")
+
+
+if __name__ == "__main__":
+    # hyperparam_tuning()
+    train_without_tuning(256, 10)
