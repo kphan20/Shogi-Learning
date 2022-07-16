@@ -146,7 +146,7 @@ def hyperparam_tuning():
     data_dir = os.path.join("shogidb2", "queries")
     config = {
         "layers": tune.grid_search([2, 4, 6, 9, 12]),
-        "lr": tune.loguniform(1e-4, 1e-1),
+        "lr": tune.loguniform(1e-4, 7e-4),
         "batch_size": tune.grid_search([64, 128, 256]),
     }
 
